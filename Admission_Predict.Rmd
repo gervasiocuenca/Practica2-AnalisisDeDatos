@@ -1,0 +1,77 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+--- 
+ title: 'PRACTICA 2: LIMPIEZA Y VALIDACIÓN DE LOS DATOS' 
+ authors: "Sabela de La Torre y Gervasio Cuenca" 
+ tuthor: "Mireia Calvo Gonzalez" 
+ date: '`r format(Sys.Date(),"%e de %B %Y")`' 
+ output: 
+   html_document: 
+     toc: yes 
+     number_sections: yes 
+     toc_depth: 2 
+ --- 
+ 
+ 
+```{r setup, include=FALSE} 
+ knitr::opts_chunk$set(echo = TRUE) 
+``` 
+
+****
+#Descripción del dataset. ¿Por qué es importante y qué pregunta / problema pretende responder?
+****
+
+El dataset escogido describe la probabilidad de ser aceptado en la universidad, en función de una serie de parámetros basados en la actividad escolar de los candidatos. 
+
+El dataset se ha extraído de kaggle, se puede acceder a él desde el siguiente link:
+
+https://www.kaggle.com/mohansacharya/graduate-admissions/downloads/graduate-admissions.zip/2
+
+Con este dataset pretendemos averiguar la probabilidad que tiene un alumno de ser aceptado en la universidad basándonos en sus cualificaciones académicas. Consideramos que puede ser un estudio interesante, ya que puede servir como herramienta para los orientadores escolares para guiar a los alumnos en sus elecciones de estudios superiores.
+
+El dataset consta de 500 registros, correspondientes a 500 alumnos y 9 atributos, a continuación describimos cada uno de estos atributos:
+
+  • Serial Nº: Identificador de alumno.
+  
+  • GRE score: Nota obtenida en el Grade Record Examinations, sería el         equivalente a la selectividad española.
+  
+  • TOEFL Score: Test de inglés como lengua extranjera.
+  
+  • University rating: Clasificación de la Universidad. (1-5)
+  
+  • SOP: Declaración de propósito, dónde el candidato explica por qué es un     buen candidato para ser admitido en la universidad. (1-5)
+  
+  • LOR: Carta de recomendación.(1-5)
+  
+  • CGPA: Cumulative Grade Point Average (1-9)
+  
+  • Research: Experiencia en investigación (0,1)
+  
+****
+# Integración y selección de los datos de interés a analizar.
+****
+
+Los datos se encuentran en formato csv, realizaremos la carga de todos los registros para su posterior tratamiento. 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+## Realizamos la carga de los datos
+alumnos <- read.csv("Admission_Predict_Ver1.1.csv", header=TRUE)
+
+## Comprobamos los datos cargados y los tipos de variables asignados
+str(alumnos)
+```
+
+Se puede comprobar que los datos asignados a las variables del nuestro set de datos son los correctos. Por otro lado, revisando los datos, vemos que no necesitaremos la columna de Serial.no, ya que no es necesario para nuestro estudio.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+##Eliminamos la primera columna
+alumnos_estudio <- alumnos[,-1]
+
+
+##Comprobamos las variables que nos han quedado en el set de de datos y sus tipos
+sapply(alumnos_estudio, function(x) class(x))
+```
+
