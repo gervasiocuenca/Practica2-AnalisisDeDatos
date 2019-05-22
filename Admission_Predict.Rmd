@@ -1,57 +1,57 @@
 ---
-output:
-  word_document: default
-  html_document: default
+title: 'PRACTICA 2: LIMPIEZA Y VALIDACIÓN DE LOS DATOS' 
+author: "Sabela de La Torre y Gervasio Cuenca" 
+tuthor: "Mireia Calvo Gonzalez" 
+date: '`r format(Sys.Date(),"%e de %B %Y")`' 
+output: 
+ html_document: 
+   toc: yes 
+   number_sections: yes 
+   toc_depth: 2 
+ pdf_document:
+  toc: yes
+  toc_depth: 2
+  number_sections: yes
 ---
---- 
- title: 'PRACTICA 2: LIMPIEZA Y VALIDACIÓN DE LOS DATOS' 
- authors: "Sabela de La Torre y Gervasio Cuenca" 
- tuthor: "Mireia Calvo Gonzalez" 
- date: '`r format(Sys.Date(),"%e de %B %Y")`' 
- output: 
-   html_document: 
-     toc: yes 
-     number_sections: yes 
-     toc_depth: 2 
- --- 
  
  
 ```{r setup, include=FALSE} 
  knitr::opts_chunk$set(echo = TRUE) 
 ``` 
+```{r load_libraries, include=FALSE}
+if(!require(kableExtra)) {
+  install.packages("kableExtra")
+  library(kableExtra); 
+}
+```
+\newcommand\pvalue{\mathop{\mbox{$p$-$\mathit{value}$}}}
 
 ****
-#Descripción del dataset. ¿Por qué es importante y qué pregunta / problema pretende responder?
+# Descripción del dataset
+## ¿Por qué es importante y qué pregunta / problema pretende responder?
 ****
 
 El dataset escogido describe la probabilidad de ser aceptado en la universidad, en función de una serie de parámetros basados en la actividad escolar de los candidatos. 
 
 El dataset se ha extraído de kaggle, se puede acceder a él desde el siguiente link:
-
 https://www.kaggle.com/mohansacharya/graduate-admissions/downloads/graduate-admissions.zip/2
 
 Con este dataset pretendemos averiguar la probabilidad que tiene un alumno de ser aceptado en la universidad basándonos en sus cualificaciones académicas. Consideramos que puede ser un estudio interesante, ya que puede servir como herramienta para los orientadores escolares para guiar a los alumnos en sus elecciones de estudios superiores.
 
 El dataset consta de 500 registros, correspondientes a 500 alumnos y 9 atributos, a continuación describimos cada uno de estos atributos:
 
-  • Serial Nº: Identificador de alumno.
-  
-  • GRE score: Nota obtenida en el Grade Record Examinations, sería el         equivalente a la selectividad española.
-  
-  • TOEFL Score: Test de inglés como lengua extranjera.
-  
-  • University rating: Clasificación de la Universidad. (1-5)
-  
-  • SOP: Declaración de propósito, dónde el candidato explica por qué es un     buen candidato para ser admitido en la universidad. (1-5)
-  
-  • LOR: Carta de recomendación.(1-5)
-  
-  • CGPA: Cumulative Grade Point Average (1-9)
-  
-  • Research: Experiencia en investigación (0,1)
+* Serial Nº: Identificador de alumno.
+* GRE score: Nota obtenida en el Grade Record Examinations, sería el equivalente a la selectividad española.
+* TOEFL Score: Test de inglés como lengua extranjera.
+* University rating: Clasificación de la Universidad. (1-5)
+* SOP: Declaración de propósito, dónde el candidato explica por qué es un buen candidato para ser admitido en la universidad. (1-5)
+* LOR: Carta de recomendación. (1-5)
+* CGPA: Cumulative Grade Point Average (1-9)
+* Research: Experiencia en investigación (0,1)
+* Chance.of.Admit: Confianza del encuestado en ser aceptado. (0-1)
   
 ****
-# Integración y selección de los datos de interés a analizar.
+# Integración y selección de los datos de interés a analizar
 ****
 
 Los datos se encuentran en formato csv, realizaremos la carga de todos los registros para su posterior tratamiento. 
@@ -64,7 +64,7 @@ alumnos <- read.csv("Admission_Predict_Ver1.1.csv", header=TRUE)
 str(alumnos)
 ```
 
-Se puede comprobar que los datos asignados a las variables del nuestro set de datos son los correctos. Por otro lado, revisando los datos, vemos que no necesitaremos la columna de Serial.no, ya que no es necesario para nuestro estudio.
+Se puede comprobar que los datos asignados a las variables del nuestro set de datos son los correctos. Por otro lado, revisando los datos, vemos que no necesitaremos la columna de `Serial.no`, ya que no es necesario para nuestro estudio.
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 ##Eliminamos la primera columna
@@ -75,3 +75,125 @@ alumnos_estudio <- alumnos[,-1]
 sapply(alumnos_estudio, function(x) class(x))
 ```
 
+# Limpieza de los datos
+
+## ¿Los datos contienen ceros o elementos vacíos? ¿Cómo gestionar estos casos?
+
+Primero buscamos si hay valors vacíos:
+```{r}
+colSums(is.na(alumnos_estudio))
+```
+y vemos que no tenemos ninguno.
+
+Ahora analizaremos los datos que tenemos en cada una de las variables (rango, media, mediana, mínimo, máximo y cuartiles) mediante la función `summary`:
+```{r}
+summary(alumnos_estudio)
+```
+Vemos que el valor 0 solamente lo encontramos en la variable `Research`, cosa que ya sabíamos porque se trata de una variable binaria.
+
+## Identificación y tratamiento de valores extremos
+
+Una herramienta gràfica muy útil para la detección de valores extremos es el diagrama de caja. Este se basa en los valores de los cuartiles. Usaremos la función `boxplot` para dibujar los diagramas para cada una de las variables:
+
+```{r echo=FALSE, out.width="50%"}
+boxplot(alumnos_estudio$GRE.Score, main="GRE.Score", col="lightblue")
+boxplot(alumnos_estudio$TOEFL.Score, main="TOEFL.Score", col="lightblue")
+```
+
+```{r echo=FALSE, out.width="50%"}
+boxplot(alumnos_estudio$University.Rating, main="GRE.Score", col="lightblue")
+boxplot(alumnos_estudio$SOP, main="TOEFL.Score", col="lightblue")
+```
+
+```{r echo=FALSE, out.width="50%"}
+boxplot(alumnos_estudio$LOR, main="LOR", col="lightblue")
+boxplot(alumnos_estudio$CGPA, main="CGPA", col="lightblue")
+```
+
+Vemos que en la variable `LOR` (carta de recomendación) tenemos un único *outlier* correspondiente al valor 1:
+```{r}
+boxplot.stats(alumnos_estudio$LOR)$out
+```
+
+```{r echo=FALSE, out.width="50%"}
+boxplot(alumnos_estudio$Research, main="Research", col="lightblue")
+boxplot(alumnos_estudio$Chance.of.Admit, main="Chance.of.Admit", col="lightblue")
+```
+En la variable `Change.of.Admit` encontramos dos *outliers* con valor 0.34:
+
+```{r}
+boxplot.stats(alumnos_estudio$Chance.of.Admit)$out
+```
+
+Observando el conjunto de datos, vemos que estos valores son completamente aceptables y, por tanto, no son *outliers* reales.
+
+# Análisis de los datos
+
+## Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar)
+
+```{r}
+# Agrupación por alumnos con experiencia en investigación
+alumnos.investigadores <- alumnos_estudio[alumnos_estudio$Research == 1,]
+alumnos.no.investigadores <- alumnos_estudio[alumnos_estudio$Research == 0,]
+
+```
+TODO: Añadir más grupos!
+
+## Comprobación de la normalidad y homogeneidad de la varianza
+
+### Comprobación de la normalidad
+
+Comprobamos si los datos siguen una distribución normal mediante la función `shapiro.test`: si $\pvalue \le 0.05$ se rechaza la hipótesis nula y se concluye que los datos **no** siguen una distribución normal.
+```{r}
+alpha <- 0.05
+col.names = colnames(alumnos_estudio)
+var.no.normales <- c()
+for (i in 1:ncol(alumnos_estudio)) {
+  # Aplicamos el test Shapiro-Wilk
+  p_val = shapiro.test(alumnos_estudio[,i])$p.value
+  if (p_val <= alpha) {
+    var.no.normales <- c(var.no.normales, col.names[i]) 
+  }
+}
+cat("Variables que no siguen una distribución normal: ")
+cat(var.no.normales, sep=", ") 
+```
+Por lo tanto, **ninguna** de las varaibles de nuestro conjunto de datos sigue una distribución normal. Ahora bien, por el **teorema del límite central** sabemos que si la muestra es suficientemente grande (n>30), la distribución de la media de cualquier conjunto de datos se parece a una normal. Así pues, podremos aplicar tests paramétricos pese a que nuestros datos no siguen una distribución normal.
+
+### Homogeneidad de la varianza
+
+Estudiaremos la homocedasticidad, o igualdad de varianzas, entre los grupos formados por alumnos con experiencia en investigación frente a los que no: 
+```{r}
+fligner.test(Chance.of.Admit ~ Research, data = alumnos_estudio)
+```
+En este test, la hipótesis nula es que las varianzas de los dos grupos son iguales, por tant, dado que $\pvalue > 0.05$, no podemos rechazar la hipótesis nula y **no** podemos afirmar que las varianzas sean significativamente diferentes.
+
+## Aplicación de pruebas estadísticas 
+
+# Representación de los resultados a partir de tablas y gráficas
+
+# Resolución del problema
+
+## A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
+
+# Código
+
+# Contribuciones
+```{r echo=FALSE}
+participacion <- matrix(
+  c(
+  "Búsqueda previa",
+  "Gervasio Cuenca, Sabela de la Torre",
+  "Redacción de las respuestas",
+  "Gervasio Cuenca, Sabela de la Torre",
+  "Desarrollo código",
+  "Gervasio Cuenca, Sabela de la Torre"
+  ),
+  ncol = 2,
+  byrow = TRUE
+  )
+colnames(participacion) <- c("Contribuciones", "Firma")
+
+knitr::kable(participacion)  %>%
+kable_styling("striped", full_width = F)
+```
