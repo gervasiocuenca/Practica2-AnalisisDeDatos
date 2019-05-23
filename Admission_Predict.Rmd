@@ -207,6 +207,35 @@ wilcox.test(alumnos.universidades.calif.baja$Chance.of.Admit, alumnos.universida
 ```
 Podemos ver que $\pvalue=2.2e^{-16} < 0.05$, por tanto, podemos **rechazar** la hipótesis nula y afirmar que haya una diferencia **significativa** en la confianza en ser admitidos entre los dos grupos.
 
+### ¿Qué variables afectan más a la posibilidad de ser admitido en una universidad?
+Para intentar contestar a esta pregunta, estudiaremos la correlación entre las diferentes variables de nuetros modelo con la probabilidad de ser admitido. Para ello calcularemos el coeficiente de correlación que mide la asociación entre dos variables. Los posibles valores que puede tomar el coeficiente de correlación varia entre -1 y 1, donde el valor de los extremos indican una correlación perfecta u el 0 indica la ausencia de correlación. EL signo es positivo cuando ambas variables se incrementan o disminuyen simultaneamente, el signo es engativo cuando los valores elevados de una variable se asocian a valores pequeños de otra.
+
+En este caso untilizaremos la correlación de Spearman como test no parámetrico ya que las variables no siguen una distribución normal, aunque sería válido usar la correlación de Pearson, por el **teorema del límite central** citado con anterioridad.
+
+```{r}
+
+alumnos.correlacion <- matrix(nc=2, nr=0)
+colnames(alumnos.correlacion) <- c("estimate", "p-value")
+
+## Realizamos el cálculo de la correlación
+
+for (i in 1:(ncol(alumnos_estudio)-1)){
+  test = cor.test(alumnos_estudio[,i], alumnos_estudio[,length(alumnos_estudio)], method = "spearman", exact = FALSE )
+  estimado = test$estimate 
+  p_valor = test$p.value
+  
+  ##Añadimos el valor a la matriz
+  valores = matrix(ncol = 2, nrow = 1)
+  valores[1][1] = estimado
+  valores[2][1] = p_valor
+  alumnos.correlacion <- rbind(alumnos.correlacion, valores)
+  rownames(alumnos.correlacion)[nrow(alumnos.correlacion)] <- colnames(alumnos_estudio)[i]  
+}
+
+print(alumnos.correlacion)
+```
+Analizando los resultados vemos que las dos variables que tienen una mayor correlación con la posibilidad de ser admitido son 'CGPA' y 'GRE.Score'. Hemos añadido el p-valor, porque nos puede dar el peso estadístico de la correlación obtenida.
+
 # Representación de los resultados a partir de tablas y gráficas
 
 # Resolución del problema
