@@ -136,6 +136,12 @@ Observando el conjunto de datos, vemos que estos valores son completamente acept
 alumnos.investigadores <- alumnos_estudio[alumnos_estudio$Research == 1,]
 alumnos.no.investigadores <- alumnos_estudio[alumnos_estudio$Research == 0,]
 
+#Agrupación por tipo de universidad
+alumnos.universidades.top <- alumnos_estudio[alumnos_estudio$University.Rating == 5,]
+alumnos.universidades.Buenas <- alumnos_estudio[alumnos_estudio$University.Rating == 4,]
+alumnos.universidades.Medias <- alumnos_estudio[alumnos_estudio$University.Rating == 3,]
+alumnos.universidades.Acepables <- alumnos_estudio[alumnos_estudio$University.Rating == 2,]
+alumnos.universidades.Flojas <- alumnos_estudio[alumnos_estudio$University.Rating == 1,]
 ```
 TODO: Añadir más grupos!
 
@@ -167,6 +173,12 @@ Estudiaremos la homocedasticidad, o igualdad de varianzas, entre los grupos form
 fligner.test(Chance.of.Admit ~ Research, data = alumnos_estudio)
 ```
 En este test, la hipótesis nula es que las varianzas de los dos grupos son iguales, por tant, dado que $\pvalue > 0.05$, no podemos rechazar la hipótesis nula y **no** podemos afirmar que las varianzas sean significativamente diferentes.
+
+Repetimos el estudio para la clasificación de las universidades:
+```{r}
+fligner.test(Chance.of.Admit ~ University.Rating, data = alumnos_estudio)
+```
+Partimos de la misma hipótesis que el caso anterior, en este caso $\pvalue < 0.05$, por lo tento podemos rechazar la hipótesis nula y **podemos afirmar** que las varianzas sean significativamente diferentes.
 
 ## Aplicación de pruebas estadísticas 
 
