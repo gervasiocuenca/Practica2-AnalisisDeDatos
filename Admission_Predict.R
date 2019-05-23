@@ -37,6 +37,22 @@ alumnos.investigadores <- alumnos_estudio[alumnos_estudio$Research == 1,]
 fligner.test(Chance.of.Admit ~ Research, data = alumnos_estudio)
 
 
+alumnos.universidades.calif.alta <- alumnos_estudio[alumnos_estudio$University.Rating >= 3,]
+alumnos.universidades.calif.baja <- alumnos_estudio[alumnos_estudio$University.Rating < 3,]
+alumnos.universidades.calif.baja
+#t.test(alumnos.universidades.calif.baja, alumnos.universidades.calif.alta, alternative = "greater", conf.level = 0.05)
+wilcox.test(alumnos.universidades.calif.baja$Chance.of.Admit, alumnos.universidades.calif.alta$Chance.of.Admit, alternative = "greater", conf.level=0.05)
+wilcox.test(alumnos.universidades.calif.baja$Chance.of.Admit, alumnos.universidades.calif.alta$Chance.of.Admit, alternative = "less", conf.level=0.05)
+wilcox.test(alumnos.universidades.calif.baja$Chance.of.Admit, alumnos.universidades.calif.alta$Chance.of.Admit, alternative = "two.sided", conf.level=0.05)
+
+mean(alumnos.universidades.calif.baja$Chance.of.Admit)
+mean(alumnos.universidades.calif.alta$Chance.of.Admit)
+
+
+
+
+
+
 participacion <- matrix(
   c("Búsqueda previa", "Gervasio Cuenca, Sabela de la Torre",
     "Redacción de las respuestas", "Gervasio Cuenca, Sabela de la Torre",

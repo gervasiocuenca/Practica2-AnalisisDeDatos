@@ -7,10 +7,10 @@ output:
  html_document: 
    toc: yes 
    number_sections: yes 
-   toc_depth: 2 
+   toc_depth: 3 
  pdf_document:
   toc: yes
-  toc_depth: 2
+  toc_depth: 3
   number_sections: yes
 ---
  
@@ -136,12 +136,16 @@ Observando el conjunto de datos, vemos que estos valores son completamente acept
 alumnos.investigadores <- alumnos_estudio[alumnos_estudio$Research == 1,]
 alumnos.no.investigadores <- alumnos_estudio[alumnos_estudio$Research == 0,]
 
-#Agrupación por tipo de universidad
+# Agrupación por tipo de universidad
 alumnos.universidades.top <- alumnos_estudio[alumnos_estudio$University.Rating == 5,]
 alumnos.universidades.Buenas <- alumnos_estudio[alumnos_estudio$University.Rating == 4,]
 alumnos.universidades.Medias <- alumnos_estudio[alumnos_estudio$University.Rating == 3,]
 alumnos.universidades.Acepables <- alumnos_estudio[alumnos_estudio$University.Rating == 2,]
 alumnos.universidades.Flojas <- alumnos_estudio[alumnos_estudio$University.Rating == 1,]
+
+# Agrupación por alumnos que optan a universidades de calificación baja vs calificación alta
+alumnos.universidades.calif.alta <- alumnos_estudio[alumnos_estudio$University.Rating >= 3,]
+alumnos.universidades.calif.baja <- alumnos_estudio[alumnos_estudio$University.Rating < 3,]
 ```
 TODO: Añadir más grupos!
 
@@ -181,6 +185,27 @@ fligner.test(Chance.of.Admit ~ University.Rating, data = alumnos_estudio)
 Partimos de la misma hipótesis que el caso anterior, en este caso $\pvalue < 0.05$, por lo tento podemos rechazar la hipótesis nula y **podemos afirmar** que las varianzas sean significativamente diferentes.
 
 ## Aplicación de pruebas estadísticas 
+
+Dado que nuestro conjunto de datos contiene más de 30 muestras, ya hemos visto que por el **teorema del límite central** podemos aplicar tests paramétricos aunque nuestros datos no sigan una distribución normal pero deberemos comprobar siempre la igualdad de varianzas. De no cumplirse, tendremos que aplicar un test no paramétrico.
+
+### ¿Hay diferencias en la confianza en ser admitidos según la universidad a la que optan los alumnos?
+
+En esta prueba buscaremos si la confianza en ser admitido, `Chance.of.Admit`, es diferente entre los alumnos que optan a universidades calificadas como bajas, es decir, `University.Rating<3`, y la confianza entre los que optan a aquellas calificadas como altas, `University.Rating>=3`.
+
+En este caso, la hipótsis nula, $H_0$, es que la confiança media de ambas poblaciones, $\mu_1$ y $\mu_2$, es igual y la hipótesis alternativa, $H_1$, que $\mu_1\neq\mu_2$ (bilateral), donde $\mu_1$ es la confiança media de los alumnos que optan por una universidad calificada como baja y $\mu_2$ el otro grupo.
+$$
+\left\{
+\begin{array}{ll}
+H_{0}: &  \mu_1=\mu_2\\
+H_{1}: & \mu_1\neq\mu_2
+\end{array}
+\right.
+$$
+Dado que en el apartado anterior hemos visto que la clasificación por universidades no cumple la igualdad de varianzas, debemos aplicar un test no paramétrico como la prueba de Mann-Whitney para datos independientes. Por lo tanto usaremos la función `wilcox.test` para realizar el contraste de hipòtesis usando un valor $\alpha=0.05$:
+```{r}
+wilcox.test(alumnos.universidades.calif.baja$Chance.of.Admit, alumnos.universidades.calif.alta$Chance.of.Admit, alternative = "two.sided", conf.level=0.05)
+```
+Podemos ver que $\pvalue=2.2e^{-16} < 0.05$, por tanto, podemos **rechazar** la hipótesis nula y afirmar que haya una diferencia **significativa** en la confianza en ser admitidos entre los dos grupos.
 
 # Representación de los resultados a partir de tablas y gráficas
 
