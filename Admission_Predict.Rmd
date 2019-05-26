@@ -19,6 +19,7 @@ output:
  knitr::opts_chunk$set(echo = TRUE) 
 ``` 
 ```{r load_libraries, include=FALSE}
+library(rminer)
 if(!require(kableExtra)) {
   install.packages("kableExtra")
   library(kableExtra); 
@@ -235,6 +236,73 @@ for (i in 1:(ncol(alumnos_estudio)-1)){
 print(alumnos.correlacion)
 ```
 Analizando los resultados vemos que las dos variables que tienen una mayor correlación con la posibilidad de ser admitido son 'CGPA' y 'GRE.Score'. Hemos añadido el p-valor, porque nos puede dar el peso estadístico de la correlación obtenida.
+
+### Modelo de regresión lineal, para predecir la posibilidad de ser admitido en una Universidad.
+
+La regresion lineal es un modelo matemático que tiene como objetivo aproximar la relación de dependencia lineal entre una variable dependiente y una o una serie de variables independientes.
+
+La regresión lineal puede ser simple o múltiple en función de las variables independientes que se incluyan en la fórmula que se introduce como argumento.
+
+Para intentar predecir la poibidad de ser adminitido en la universidad, utilizaremos las varaibles con correlación superior a 0.7, en este caso todas menos LOR y Research.
+
+Para ello, prepararemos dos set de datos, uno con el 85% de los datos, que usaremos para entrenar los modelos y escoger el que mejor resultado de, y el segundo con el 15% restante como test de pruebas, para predecir el campo que buscamos y compararlo con el valor real.
+
+```{r}
+## Creamos los sets de datos.
+h <- holdout(alumnos_estudio$University.Rating, ratio = 0.85, mode="statified")
+alumnos_train <- alumnos_estudio[h$tr,]
+alumnos_test <- alumnos_estudio[h$ts,]
+
+##Generamos los diferentes modelos.
+
+alumnos_m1 <- lm(Chance.of.Admit ~ CGPA + GRE.Score + TOEFL.Score , data = alumnos_train)
+alumnos_m2 <- lm(Chance.of.Admit ~ CGPA + GRE.Score + University.Rating , data = alumnos_train)
+alumnos_m3 <- lm(Chance.of.Admit ~ CGPA + GRE.Score + SOP , data = alumnos_train)
+alumnos_m4 <- lm(Chance.of.Admit ~ CGPA + TOEFL.Score + University.Rating , data = alumnos_train)
+alumnos_m5 <- lm(Chance.of.Admit ~ CGPA + TOEFL.Score + SOP , data = alumnos_train)
+alumnos_m6 <- lm(Chance.of.Admit ~ CGPA + University.Rating + SOP , data = alumnos_train)
+alumnos_m7 <- lm(Chance.of.Admit ~ GRE.Score + TOEFL.Score + University.Rating , data = alumnos_train)
+alumnos_m8 <- lm(Chance.of.Admit ~ GRE.Score + TOEFL.Score + SOP , data = alumnos_train)
+alumnos_m9 <- lm(Chance.of.Admit ~ TOEFL.Score + University.Rating + SOP , data = alumnos_train)
+
+regresion <- matrix(c(1 , summary(alumnos_m1)$r.squared,
+                      2 , summary(alumnos_m2)$r.squared,
+                      3 , summary(alumnos_m3)$r.squared,
+                      4 , summary(alumnos_m4)$r.squared,
+                      5 , summary(alumnos_m5)$r.squared,
+                      6 , summary(alumnos_m6)$r.squared,
+                      7 , summary(alumnos_m7)$r.squared,
+                      8 , summary(alumnos_m8)$r.squared,
+                      9 , summary(alumnos_m9)$r.squared),ncol = 2, byrow = TRUE)
+colnames(regresion) <- c("Modelo", "Bondad")
+regresion
+
+## Usamos el modelo que mejor resultado ha dado.
+
+Modelo = regresion[which.max(regresion[,2]),1]
+Modelo
+
+if (Modelo == 1) Prediccion<-predict(alumnos_m1, alumnos_test, type="response")
+if (Modelo == 2) Prediccion<-predict(alumnos_m2, alumnos_test, type="response")
+if (Modelo == 3) Prediccion<-predict(alumnos_m3, alumnos_test, type="response")
+if (Modelo == 4) Prediccion<-predict(alumnos_m4, alumnos_test, type="response")
+if (Modelo == 5) Prediccion<-predict(alumnos_m5, alumnos_test, type="response")
+if (Modelo == 6) Prediccion<-predict(alumnos_m6, alumnos_test, type="response")
+if (Modelo == 7) Prediccion<-predict(alumnos_m7, alumnos_test, type="response")
+if (Modelo == 8) Prediccion<-predict(alumnos_m8, alumnos_test, type="response")
+if (Modelo == 9) Prediccion<-predict(alumnos_m9, alumnos_test, type="response")
+
+## Comparamos los resultados predecidos con los reales, añadimos la columna de diferncia entre ambos valores.
+
+Resultados<-data.frame(
+            real=alumnos_test$Chance.of.Admit,
+            predicted= Prediccion,
+            dif=alumnos_test$Chance.of.Admit- Prediccion  ) 
+colnames(Resultados)<-c("Real","Predecido", "Diferencia")
+
+summary(Resultados)
+```
+
 
 # Representación de los resultados a partir de tablas y gráficas
 
