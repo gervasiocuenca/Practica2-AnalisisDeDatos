@@ -4,14 +4,14 @@ author: "Sabela de La Torre y Gervasio Cuenca"
 tuthor: "Mireia Calvo Gonzalez" 
 date: '`r format(Sys.Date(),"%e de %B %Y")`' 
 output: 
- html_document: 
-   toc: yes 
-   number_sections: yes 
-   toc_depth: 3 
  pdf_document:
   toc: yes
   toc_depth: 3
   number_sections: yes
+ html_document: 
+   toc: yes 
+   number_sections: yes 
+   toc_depth: 3 
 ---
  
  
@@ -19,7 +19,10 @@ output:
  knitr::opts_chunk$set(echo = TRUE) 
 ``` 
 ```{r load_libraries, include=FALSE}
-library(rminer)
+if(!require(rminer)) {
+  install.packages("rminer")
+  library(rminer)
+}
 if(!require(kableExtra)) {
   install.packages("kableExtra")
   library(kableExtra); 
@@ -275,10 +278,13 @@ regresion <- matrix(c(1 , summary(alumnos_m1)$r.squared,
                       8 , summary(alumnos_m8)$r.squared,
                       9 , summary(alumnos_m9)$r.squared),ncol = 2, byrow = TRUE)
 colnames(regresion) <- c("Modelo", "Bondad")
-regresion
 
+knitr::kable(regresion)  %>%
+kable_styling("striped", full_width = F)
+```
+
+```{r}
 ## Usamos el modelo que mejor resultado ha dado.
-
 Modelo = regresion[which.max(regresion[,2]),1]
 Modelo
 
@@ -293,7 +299,6 @@ if (Modelo == 8) Prediccion<-predict(alumnos_m8, alumnos_test, type="response")
 if (Modelo == 9) Prediccion<-predict(alumnos_m9, alumnos_test, type="response")
 
 ## Comparamos los resultados predecidos con los reales, añadimos la columna de diferncia entre ambos valores.
-
 Resultados<-data.frame(
             real=alumnos_test$Chance.of.Admit,
             predicted= Prediccion,
@@ -303,7 +308,6 @@ colnames(Resultados)<-c("Real","Predecido", "Diferencia")
 summary(Resultados)
 ```
 
-
 # Representación de los resultados a partir de tablas y gráficas
 
 # Resolución del problema
@@ -311,6 +315,7 @@ summary(Resultados)
 ## A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
 
 # Código
+El código necesario para resolver la práctica se ha incluido en este mismo documento.
 
 # Contribuciones
 ```{r echo=FALSE}
