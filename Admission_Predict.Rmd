@@ -4,14 +4,14 @@ author: "Sabela de La Torre y Gervasio Cuenca"
 tuthor: "Mireia Calvo Gonzalez" 
 date: '`r format(Sys.Date(),"%e de %B %Y")`' 
 output: 
- pdf_document:
-  toc: yes
-  toc_depth: 3
-  number_sections: yes
  html_document: 
    toc: yes 
    number_sections: yes 
    toc_depth: 3 
+ pdf_document:
+  toc: yes
+  toc_depth: 3
+  number_sections: yes
 ---
  
  
@@ -27,13 +27,21 @@ if(!require(kableExtra)) {
   install.packages("kableExtra")
   library(kableExtra); 
 }
+if(!require(corrplot)) {
+  install.packages("corrplot")
+  library(corrplot)
+}
+if(!require(caret)) {
+  install.packages("caret")
+  library(caret)
+}
 ```
 \newcommand\pvalue{\mathop{\mbox{$p$-$\mathit{value}$}}}
 
 ****
 # Descripción del dataset
-## ¿Por qué es importante y qué pregunta / problema pretende responder?
 ****
+**¿Por qué es importante y qué pregunta / problema pretende responder?**
 
 El dataset escogido describe la probabilidad de ser aceptado en la universidad, en función de una serie de parámetros basados en la actividad escolar de los candidatos. 
 
@@ -41,6 +49,8 @@ El dataset se ha extraído de kaggle, se puede acceder a él desde el siguiente 
 https://www.kaggle.com/mohansacharya/graduate-admissions/downloads/graduate-admissions.zip/2
 
 Con este dataset pretendemos averiguar la probabilidad que tiene un alumno de ser aceptado en la universidad basándonos en sus cualificaciones académicas. Consideramos que puede ser un estudio interesante, ya que puede servir como herramienta para los orientadores escolares para guiar a los alumnos en sus elecciones de estudios superiores.
+
+También comprobaremos si hay diferencia en la probabilidad de ser admitidos entre los alumnos que optan a universidades con calificación alta y aquellos que optan a universidades con calificación baja.
 
 El dataset consta de 500 registros, correspondientes a 500 alumnos y 9 atributos, a continuación describimos cada uno de estos atributos:
 
@@ -81,7 +91,7 @@ sapply(alumnos_estudio, function(x) class(x))
 
 # Limpieza de los datos
 
-## ¿Los datos contienen ceros o elementos vacíos? ¿Cómo gestionar estos casos?
+## Ceros y elementos vacíos
 
 Primero buscamos si hay valors vacíos:
 ```{r}
@@ -120,9 +130,10 @@ boxplot.stats(alumnos_estudio$LOR)$out
 ```
 
 ```{r echo=FALSE, out.width="50%"}
-boxplot(alumnos_estudio$Research, main="Research", col="lightblue")
+#boxplot(alumnos_estudio$Research, main="Research", col="lightblue")
 boxplot(alumnos_estudio$Chance.of.Admit, main="Chance.of.Admit", col="lightblue")
 ```
+
 En la variable `Change.of.Admit` encontramos dos *outliers* con valor 0.34:
 
 ```{r}
@@ -130,12 +141,23 @@ boxplot.stats(alumnos_estudio$Chance.of.Admit)$out
 ```
 
 Observando el conjunto de datos, vemos que estos valores son completamente aceptables y, por tanto, no son *outliers* reales.
+Por último, dado que la variable `Research` es una variable binaria y puede considerarse categórica, no tiene sentido representarla mediante un boxplot y por ese motivo la hemos otimido.
 
 # Análisis de los datos
 
-## Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar)
+**Selección de los grupos de datos que se quieren analizar/comparar**
+
+Porcedemos a realizar algunas agrupaciones de datos que nos resultan interesantes, aunque no todos serán utilitzados para hacer cálculos estadísticos.
+
+* Agrupación por alumnos que optan a universidades con calificación baja vs calificación alta
+* Agrupación por alumnos con experiencia en investigación (en apartados posteriores veremos que la variable `Research` no es relevante a la hora de determinar la proabilidad de admisión)
+* Agrupación por alumnos por tipo de universidad
 
 ```{r}
+# Agrupación por alumnos que optan a universidades de calificación baja vs calificación alta
+alumnos.universidades.calif.alta <- alumnos_estudio[alumnos_estudio$University.Rating >= 3,]
+alumnos.universidades.calif.baja <- alumnos_estudio[alumnos_estudio$University.Rating < 3,]
+
 # Agrupación por alumnos con experiencia en investigación
 alumnos.investigadores <- alumnos_estudio[alumnos_estudio$Research == 1,]
 alumnos.no.investigadores <- alumnos_estudio[alumnos_estudio$Research == 0,]
@@ -146,12 +168,7 @@ alumnos.universidades.Buenas <- alumnos_estudio[alumnos_estudio$University.Ratin
 alumnos.universidades.Medias <- alumnos_estudio[alumnos_estudio$University.Rating == 3,]
 alumnos.universidades.Acepables <- alumnos_estudio[alumnos_estudio$University.Rating == 2,]
 alumnos.universidades.Flojas <- alumnos_estudio[alumnos_estudio$University.Rating == 1,]
-
-# Agrupación por alumnos que optan a universidades de calificación baja vs calificación alta
-alumnos.universidades.calif.alta <- alumnos_estudio[alumnos_estudio$University.Rating >= 3,]
-alumnos.universidades.calif.baja <- alumnos_estudio[alumnos_estudio$University.Rating < 3,]
 ```
-TODO: Añadir más grupos!
 
 ## Comprobación de la normalidad y homogeneidad de la varianza
 
@@ -174,6 +191,51 @@ cat(var.no.normales, sep=", ")
 ```
 Por lo tanto, **ninguna** de las varaibles de nuestro conjunto de datos sigue una distribución normal. Ahora bien, por el **teorema del límite central** sabemos que si la muestra es suficientemente grande (n>30), la distribución de la media de cualquier conjunto de datos se parece a una normal. Así pues, podremos aplicar tests paramétricos pese a que nuestros datos no siguen una distribución normal.
 
+Complementaremos los resultados obtenidos con `shapiro.test` con histogramas (`hist`) y gráficos Q-Q (`qqnorm` y `qqline`) para representar de manera visual si aquellas variables que pueden tomar valores continuos (por tanto, todas menos `Research` y `University.Rating`) siguen una distribución normal:
+
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$GRE.Score)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$TOEFL.Score)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$SOP)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$LOR)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$CGPA)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$Chance.of.Admit)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$GRE.Score)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+```{r echo=FALSE, out.width="50%"}
+hist(alumnos_estudio$TOEFL.Score)
+qqnorm(alumnos_estudio$GRE.Score)
+qqline(alumnos_estudio$GRE.Score)
+```
+
+Como podemos observar, se aproximan bastante a la normal pero no del todo, por lo tanto, se confirma el resultado obtenido mediante el test de Shapiro-Wilk: las variables no siguen una distribución normal.
+
 ### Homogeneidad de la varianza
 
 Estudiaremos la homocedasticidad, o igualdad de varianzas, entre los grupos formados por alumnos con experiencia en investigación frente a los que no: 
@@ -188,44 +250,60 @@ fligner.test(Chance.of.Admit ~ University.Rating, data = alumnos_estudio)
 ```
 Partimos de la misma hipótesis que el caso anterior, en este caso $\pvalue < 0.05$, por lo tento podemos rechazar la hipótesis nula y **podemos afirmar** que las varianzas sean significativamente diferentes.
 
+Dado que en el siguiente apartado realizaremos un contraste de hipótesis entre los grupos que alumnos que optan a universidades calificadas como altas y los alumnos que optan a aquellas calificadas como bajas, procederemos a comparar las varianzas entre estos dos grupos:
+```{r}
+fligner.test(Chance.of.Admit ~ University.Rating >= 3, data = alumnos_estudio)
+```
+Vemos que obtenemos un $\pvalue=0.119$, por tanto, al mayor que $\alpha=0.05$, no podemos afirmar que las varianzas sean significativamente diferentes.
+
 ## Aplicación de pruebas estadísticas 
 
 Dado que nuestro conjunto de datos contiene más de 30 muestras, ya hemos visto que por el **teorema del límite central** podemos aplicar tests paramétricos aunque nuestros datos no sigan una distribución normal pero deberemos comprobar siempre la igualdad de varianzas. De no cumplirse, tendremos que aplicar un test no paramétrico.
 
-### ¿Hay diferencias en la confianza en ser admitidos según la universidad a la que optan los alumnos?
+### ¿Es menor la confianza en ser admitido según la universidad a la que optan los alumnos?
 
-En esta prueba buscaremos si la confianza en ser admitido, `Chance.of.Admit`, es diferente entre los alumnos que optan a universidades calificadas como bajas, es decir, `University.Rating<3`, y la confianza entre los que optan a aquellas calificadas como altas, `University.Rating>=3`.
+En esta prueba buscaremos si la confianza en ser admitido, `Chance.of.Admit`, es menor entre los alumnos que optan a universidades calificadas como bajas, es decir, `University.Rating<3`, y la confianza entre los que optan a aquellas calificadas como altas, `University.Rating>=3`.
 
-En este caso, la hipótsis nula, $H_0$, es que la confiança media de ambas poblaciones, $\mu_1$ y $\mu_2$, es igual y la hipótesis alternativa, $H_1$, que $\mu_1\neq\mu_2$ (bilateral), donde $\mu_1$ es la confiança media de los alumnos que optan por una universidad calificada como baja y $\mu_2$ el otro grupo.
+En este caso, la hipótsis nula, $H_0$, es que la confiança media de ambas poblaciones, $\mu_1$ y $\mu_2$, es igual y la hipótesis alternativa, $H_1$, que $\mu_1<\mu_2$ (bilateral), donde $\mu_1$ es la confiança media de los alumnos que optan por una universidad calificada como baja y $\mu_2$ el otro grupo.
 $$
 \left\{
 \begin{array}{ll}
 H_{0}: &  \mu_1=\mu_2\\
-H_{1}: & \mu_1\neq\mu_2
+H_{1}: & \mu_1<\mu_2
 \end{array}
 \right.
 $$
-Dado que en el apartado anterior hemos visto que la clasificación por universidades no cumple la igualdad de varianzas, debemos aplicar un test no paramétrico como la prueba de Mann-Whitney para datos independientes. Por lo tanto usaremos la función `wilcox.test` para realizar el contraste de hipòtesis usando un valor $\alpha=0.05$:
+Dado que en el apartado anterior hemos visto que la clasificación por universidades cumple la igualdad de varianzas (o, más bien, no podemos afirmar que sean significativamente diferentes) y que la variable no sigue una distribución normal, seremos conservadores y aplicaremos un test no paramétrico como la prueba de Mann-Whitney para datos independientes (podríamos haber optado por aplicar un test parámetrico y ser menos conservadores ya que el **teorema del límite central** así nos lo permite). 
+
+Por lo tanto usaremos la función `wilcox.test` para realizar el contraste de hipótesis usando un valor $\alpha=0.05$:
 ```{r}
-wilcox.test(alumnos.universidades.calif.baja$Chance.of.Admit, alumnos.universidades.calif.alta$Chance.of.Admit, alternative = "two.sided", conf.level=0.05)
+wilcox.test(
+  alumnos.universidades.calif.baja$Chance.of.Admit,
+  alumnos.universidades.calif.alta$Chance.of.Admit,
+  alternative = "less",
+  conf.level = 0.05
+)
 ```
-Podemos ver que $\pvalue=2.2e^{-16} < 0.05$, por tanto, podemos **rechazar** la hipótesis nula y afirmar que haya una diferencia **significativa** en la confianza en ser admitidos entre los dos grupos.
+Podemos ver que $\pvalue=2.2e^{-16} < 0.05$, por tanto, podemos **rechazar** la hipótesis nula y afirmar que la confianza en ser admitidos de los alumnos que optan por universidades de calificación baja és **significativamente inferior** a la confianza del otro grupo de alumnos.
+Este resultado es en parte sorprendente en parte esperado ya que la lógica hace pensar que las universidades con calificación baja tienen criterios de acceso menos restrictivos (lo cual haría pensar que los alumnos tendrían mayor confianza en ser admitidos) pero a la vez si un alumno opta por una universidad de más bajo nivel es posible que sea porque no es un buen estudiante y, por consecuencia, confíe menos en ser admitido.
 
 ### ¿Qué variables afectan más a la posibilidad de ser admitido en una universidad?
-Para intentar contestar a esta pregunta, estudiaremos la correlación entre las diferentes variables de nuetros modelo con la probabilidad de ser admitido. Para ello calcularemos el coeficiente de correlación que mide la asociación entre dos variables. Los posibles valores que puede tomar el coeficiente de correlación varia entre -1 y 1, donde el valor de los extremos indican una correlación perfecta u el 0 indica la ausencia de correlación. EL signo es positivo cuando ambas variables se incrementan o disminuyen simultaneamente, el signo es engativo cuando los valores elevados de una variable se asocian a valores pequeños de otra.
+
+Para intentar contestar a esta pregunta, estudiaremos la correlación entre las diferentes variables de nuetros modelo con la probabilidad de ser admitido. Para ello calcularemos el coeficiente de correlación que mide la asociación entre dos variables. Los posibles valores que puede tomar el coeficiente de correlación varia entre -1 y 1, donde el valor de los extremos indican una correlación perfecta u el 0 indica la ausencia de correlación. EL signo es positivo cuando ambas variables se incrementan o disminuyen simultaneamente, el signo es negativo cuando los valores elevados de una variable se asocian a valores pequeños de otra.
 
 En este caso untilizaremos la correlación de Spearman como test no parámetrico ya que las variables no siguen una distribución normal, aunque sería válido usar la correlación de Pearson, por el **teorema del límite central** citado con anterioridad.
 
 ```{r}
-
-alumnos.correlacion <- matrix(nc=2, nr=0)
+alumnos.correlacion <- matrix(nc = 2, nr = 0)
 colnames(alumnos.correlacion) <- c("estimate", "p-value")
 
 ## Realizamos el cálculo de la correlación
-
-for (i in 1:(ncol(alumnos_estudio)-1)){
-  test = cor.test(alumnos_estudio[,i], alumnos_estudio[,length(alumnos_estudio)], method = "spearman", exact = FALSE )
-  estimado = test$estimate 
+for (i in 1:(ncol(alumnos_estudio) - 1)) {
+  test = cor.test(alumnos_estudio[, i],
+                  alumnos_estudio[, length(alumnos_estudio)],
+                  method = "spearman",
+                  exact = FALSE)
+  estimado = test$estimate
   p_valor = test$p.value
   
   ##Añadimos el valor a la matriz
@@ -233,12 +311,22 @@ for (i in 1:(ncol(alumnos_estudio)-1)){
   valores[1][1] = estimado
   valores[2][1] = p_valor
   alumnos.correlacion <- rbind(alumnos.correlacion, valores)
-  rownames(alumnos.correlacion)[nrow(alumnos.correlacion)] <- colnames(alumnos_estudio)[i]  
+  rownames(alumnos.correlacion)[nrow(alumnos.correlacion)] <-
+    colnames(alumnos_estudio)[i]
 }
 
 print(alumnos.correlacion)
 ```
-Analizando los resultados vemos que las dos variables que tienen una mayor correlación con la posibilidad de ser admitido son 'CGPA' y 'GRE.Score'. Hemos añadido el p-valor, porque nos puede dar el peso estadístico de la correlación obtenida.
+Analizando los resultados vemos que las dos variables que tienen una mayor correlación con la posibilidad de ser admitido son `CGPA` y `GRE.Score`. Hemos añadido el $\pvalue$ porque nos puede dar el peso estadístico de la correlación obtenida.
+
+También podemos representar gráficamente esta correlación entre las diferentes variables mediante `corrplot`:
+
+```{r}
+corr.res <- cor(alumnos_estudio)
+corrplot(corr.res, method="circle")
+```
+
+Como ya hemos visto en el cálculo con `corr.test`, las variables que más influyen en `Chance.of.Admit` son `CGPA`, `GRE.Score` y `TOEFL.Score`.
 
 ### Modelo de regresión lineal, para predecir la posibilidad de ser admitido en una Universidad.
 
@@ -246,7 +334,7 @@ La regresion lineal es un modelo matemático que tiene como objetivo aproximar l
 
 La regresión lineal puede ser simple o múltiple en función de las variables independientes que se incluyan en la fórmula que se introduce como argumento.
 
-Para intentar predecir la poibidad de ser adminitido en la universidad, utilizaremos las varaibles con correlación superior a 0.7, en este caso todas menos LOR y Research.
+Para intentar predecir la poibidad de ser adminitido en la universidad, utilizaremos las variables con correlación superior a 0.7, en este caso todas menos `LOR` y `Research.`
 
 Para ello, prepararemos dos set de datos, uno con el 85% de los datos, que usaremos para entrenar los modelos y escoger el que mejor resultado de, y el segundo con el 15% restante como test de pruebas, para predecir el campo que buscamos y compararlo con el valor real.
 
@@ -281,13 +369,16 @@ colnames(regresion) <- c("Modelo", "Bondad")
 
 knitr::kable(regresion)  %>%
 kable_styling("striped", full_width = F)
-```
 
-```{r}
 ## Usamos el modelo que mejor resultado ha dado.
 Modelo = regresion[which.max(regresion[,2]),1]
 Modelo
+```
 
+Vemos que la mayor bondad la encontramos en el modelo indicado aunque diferentes ejecuciones producen diferentes resultados.
+
+A continuación, predecimos los valores usando el conjunto de datos de test y los comparamos con los reales:
+```{r}
 if (Modelo == 1) Prediccion<-predict(alumnos_m1, alumnos_test, type="response")
 if (Modelo == 2) Prediccion<-predict(alumnos_m2, alumnos_test, type="response")
 if (Modelo == 3) Prediccion<-predict(alumnos_m3, alumnos_test, type="response")
@@ -298,7 +389,7 @@ if (Modelo == 7) Prediccion<-predict(alumnos_m7, alumnos_test, type="response")
 if (Modelo == 8) Prediccion<-predict(alumnos_m8, alumnos_test, type="response")
 if (Modelo == 9) Prediccion<-predict(alumnos_m9, alumnos_test, type="response")
 
-## Comparamos los resultados predecidos con los reales, añadimos la columna de diferncia entre ambos valores.
+## Comparamos los resultados predecidos con los reales, añadimos la columna de diferencia entre ambos valores.
 Resultados<-data.frame(
             real=alumnos_test$Chance.of.Admit,
             predicted= Prediccion,
@@ -308,11 +399,65 @@ colnames(Resultados)<-c("Real","Predecido", "Diferencia")
 summary(Resultados)
 ```
 
-# Representación de los resultados a partir de tablas y gráficas
+Como hemos visto que según cómo se partan los grupos el mejor modelo obtenido varía notablemente, realizaremos el mismo cálculo pero partiendo múltiples veces los datos en diferentes grupos de prueba y test para evitar sobreestimar/infraestimar los resultados por culpa de esta única partición.
+
+Para ello, utilizaremos la función `trainControl` y el mètodo *leave-one-out* que consiste en realizar la validación cruzada de tipo *k-fold* donde *k* se ajusta al número de muestras del conjunto de datos:
+
+```{r}
+# Leave-one-out
+train_control <- trainControl(method="LOOCV")
+modelo1 <- train(Chance.of.Admit ~ CGPA + GRE.Score + TOEFL.Score, 
+               data=alumnos_estudio, trControl=train_control, method="lm")
+modelo2 <- train(Chance.of.Admit ~ CGPA + GRE.Score + University.Rating, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+modelo3 <- train(Chance.of.Admit ~ CGPA + GRE.Score + SOP, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+modelo4 <- train(Chance.of.Admit ~ CGPA + TOEFL.Score + University.Rating, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+modelo5 <- train(Chance.of.Admit ~ CGPA + TOEFL.Score + SOP, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+modelo6 <- train(Chance.of.Admit ~ CGPA + University.Rating + SOP, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+modelo7 <- train(Chance.of.Admit ~ GRE.Score + TOEFL.Score + University.Rating, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+modelo8 <- train(Chance.of.Admit ~ GRE.Score + TOEFL.Score + SOP, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+modelo9 <- train(Chance.of.Admit ~ TOEFL.Score + University.Rating + SOP, 
+                 data=alumnos_estudio, trControl=train_control, method="lm")
+#print(modelo1)
+#summary(modelo1)
+
+regresion <- matrix(c(1 , summary(modelo1)$r.squared,
+                      2 , summary(modelo2)$r.squared,
+                      3 , summary(modelo3)$r.squared,
+                      4 , summary(modelo4)$r.squared,
+                      5 , summary(modelo5)$r.squared,
+                      6 , summary(modelo6)$r.squared,
+                      7 , summary(modelo7)$r.squared,
+                      8 , summary(modelo8)$r.squared,
+                      9 , summary(modelo9)$r.squared),
+                    ncol = 2, byrow = TRUE)
+colnames(regresion) <- c("Modelo", "Bondad")
+
+knitr::kable(regresion)  %>%
+kable_styling("striped", full_width = F)
+
+regresion[which.max(regresion[,2]),1]
+```
+
+Vemos que, utilizando múltiples agrupaciones, el mejor modelo es el número 2.
+
+# Representación de los resultados
+
+En la propia resolución de los ejericios hemos incluido las tablas con los resultados y los gráficos que hemos considerado significativos.
 
 # Resolución del problema
 
-## A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?
+**A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?**
+
+Mediante los tests realizados, hemos podido comprobar que las variables `CGPA`, `GRE.Score` y `TOEFL.Score` están altamente relacionadas con la probabilidad de que el alumno sea admitido en la universidad deseada. Además, como la correlación es positiva, sabemos que cuanto más alto sea el valor de estas variables, más alta será también la probabilidad de admisión. Así  pues, la media de notas acumulada (`CGPA`), la nota obtenida en la selectividad (`GRE.Score`) y la nota en el test de inglés (`TOEFL.Score`) son críticas a la hora de aumentar las posiblidades de ser admitido.
+
+También hemos podido determinar que hay una diferencia significativa en la confianza en ser admitidos entre aquellos alumnos que optan por universidades de calificación alta y aquellos que optan por las de calificación baja, siendo más alta la de los primeros.
 
 # Código
 El código necesario para resolver la práctica se ha incluido en este mismo documento.
